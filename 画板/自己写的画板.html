@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+
+    <link rel="stylesheet" href="./画板.css" class="href" />
+  </head>
+
+  <body>
+    <div id="container">
+      <div id="middle">
+        <div id="header">
+          <div id="colorList">
+            <input id="foregroundColorSelector" type="color" value="#ff0000" />
+            <input id="backgroundColorSelector" type="color" value="#ffffff" />
+            <label for="isFill">
+              fill<input type="checkbox" id="isFill" />
+            </label>
+          </div>
+          <input
+            type="range"
+            id="strokeWidthSelector"
+            value="4"
+            max="9"
+            min="1"
+            step="2"
+          />
+          <div id="toolList">
+            <button class="pencil" onclick="tool = 'pencil'">pencil</button>
+            <button class="eraser" onclick="tool = 'eraser'">eraser</button>
+            <button class="line" onclick="tool = 'line'">line</button>
+            <button class="rect" onclick="tool = 'rect'">rect</button>
+            <button class="ellipse" onclick="tool = 'ellipse'">ellipse</button>
+            <button class="polygon" onclick="tool = 'polygon'">polygon</button>
+            <button class="BezierCurve" onclick="tool = 'BezierCurve'">
+              BezierCurve
+            </button>
+          </div>
+          <div id="functionBtn">
+            <button id="revoke">revoke</button>
+            <button id="cancelRevoke">cancelRevoke</button>
+            <button id="clearAll">clearAll</button>
+            <button id="saveSvg">saveSvg</button>
+          </div>
+        </div>
+        <svg
+          id="paintBoard"
+          version="1.1"
+          xmlns="http://www.w3.org/2000/svg"
+        ></svg>
+      </div>
+      <div id="left"></div>
+      <div id="right"></div>
+    </div>
+  </body>
+  <script>
+    const paintBoard = document.querySelector("#paintBoard");
+    const foregroundColorSelector = document.querySelector(
+      "#foregroundColorSelector"
+    );
+    const backgroundColorSelector = document.querySelector(
+      "#backgroundColorSelector"
+    );
+    const isFill = document.querySelector("#isFill");
+    const strokeWidthSelector = document.querySelector("#strokeWidthSelector");
+    const saveSvg = document.querySelector("#saveSvg");
+    const clearAll = document.querySelector("#clearAll");
+    const revoke = document.querySelector("#revoke");
+    const cancelRevoke = document.querySelector("#cancelRevoke");
+
+    let tool = "pencil";
+    let node;
+    let startPos;
+
+    // 贝塞尔曲线
+    let mouseMove = false;
+    let clickTime = 1;
+    //
+
+    // polygon
+    let plgClickTime = 1;
+    let plgStartPos;
+    //
+
+    let isSaved = true;
+    paintBoard.addEventListener("mousedown", function (e) {
+      if (e.which === 1) {
+        isSaved = false;
+        const pos = mousePos(paintBoard);
+
+        startPos = pos;
+        if (tool === "pencil") {
+          node = elt("path", {
+            d: `
+              M ${pos.x} ${pos.y}
+              L ${pos.x} ${pos.y}
+            `,
+            fill: "none",
+            stroke: foregroundColorSelector.value,
+            "stroke-linecap": "round",
+            "stroke-width": strokeWidthSelector.value,
+          });
+          paintBoard.appendChild(node);
+        }
+
+        if (tool === "eraser") {
+          node = elt("path", {
+            d: `
+              M ${pos.x} ${pos.y}
+              L ${pos.x} ${pos.y}
+            `,
+            stroke: "white",
+            "stroke-width": strokeWidthSelector.value,
+            "stroke-linecap": "round",
+            fill: "none",
+          });
+          paintBoard.appendChild(node);
+        }
+
+        if (tool === "line") {
+          node = elt("line", {
+            x1: pos.x,
+            y1: pos.y,
+            x2: pos.x,
+            y2: pos.y,
+            stroke: foregroundColorSelector.value,
+            "stroke-width": strokeWidthSelector.value,
+            "stroke-linecap": "round",
+          });
+          paintBoard.appendChild(node);
+        }
+
+        if (tool === "rect") {
+          node = elt("rect", {
+            x: pos.x,
+            y: pos.y,
+            fill: "none",
+            stroke: foregroundColorSelector.value,
+            "stroke-width": strokeWidthSelector.value,
+          });
+          if (isFill.checked) {
+            node.setAttribute("fill", backgroundColorSelector.value);
+          } else {
+            node.setAttribute("fill", "none");
+          }
+          paintBoard.appendChild(node);
+        }
+
+        if (tool === "circle") {
+          node = elt("circle", {
+            cx: pos.x,
+            cy: pos.y,
+            fill: "none",
+            "stroke-width": strokeWidthSelector.value,
+            stroke: foregroundColorSelector.value,
+          });
+          if (isFill.checked) {
+            node.setAttribute("fill", backgroundColorSelector.value);
+          } else {
+            node.setAttribute("fill", "none");
+          }
+          paintBoard.appendChild(node);
+        }
+
+        if (tool === "ellipse") {
+          node = elt("ellipse", {
+            cx: pos.x,
+            cy: pos.y,
+            fill: "none",
+            "stroke-width": strokeWidthSelector.value,
+            stroke: foregroundColorSelector.value,
+          });
+          if (isFill.checked) {
+            node.setAttribute("fill", backgroundColorSelector.value);
+          } else {
+            node.setAttribute("fill", "none");
+          }
+          paintBoard.appendChild(node);
+        }
+
+        if (tool === "polygon") {
+          if (plgClickTime === 1) {
+            plgStartPos = pos;
+            node = elt("polyline", {
+              points: `${pos.x} ${pos.y} ${pos.x} ${pos.y}`,
+              fill: "none",
+              stroke: foregroundColorSelector.value,
+              "stroke-width": strokeWidthSelector.value,
+              "stroke-linecap": "round",
+            });
+            plgClickTime++;
+            paintBoard.appendChild(node);
+          } else {
+            if (
+              Math.abs(pos.x - plgStartPos.x) < 50 &&
+              Math.abs(pos.y - plgStartPos.y) < 50
+            ) {
+              let points = node.getAttribute("points");
+              points += ` ${plgStartPos.x} ${plgStartPos.y}`;
+              paintBoard.removeChild(node);
+              node = elt("polygon", {
+                points: points,
+                fill: "none",
+                stroke: foregroundColorSelector.value,
+                "stroke-width": strokeWidthSelector.value,
+              });
+              if (isFill.checked) {
+                node.setAttribute("fill", backgroundColorSelector.value);
+              } else {
+                node.setAttribute("fill", "none");
+              }
+              paintBoard.appendChild(node);
+              plgClickTime = 1;
+              return; // 返回，不加mousemoveEvent;
+            } else {
+              if (isFill.checked) {
+                node.setAttribute("fill", backgroundColorSelector.value);
+              } else {
+                node.setAttribute("fill", "none");
+              }
+              let points = node.getAttribute("points");
+              points += ` ${pos.x} ${pos.y}`;
+              node.setAttribute("points", points);
+            }
+          }
+        }
+
+        if (tool === "BezierCurve") {
+          if (clickTime === 1) {
+            node = elt("path", {
+              d: `
+                M ${pos.x} ${pos.y}
+                C ${pos.x} ${pos.y} ${pos.x} ${pos.y} ${pos.x} ${pos.y}
+              `,
+              fill: "none",
+              stroke: foregroundColorSelector.value,
+              "stroke-width": strokeWidthSelector.value,
+            });
+            paintBoard.appendChild(node);
+            clickTime++;
+          } else if (mouseMove ? clickTime : clickTime--) {
+            if (clickTime === 2) {
+              let d = node.getAttribute("d");
+              d = d.replace(/C [\d.]+ [\d.]+/, () => {
+                return `C ${pos.x} ${pos.y}`;
+              });
+              node.setAttribute("d", d);
+              clickTime++;
+            } else if (clickTime === 3) {
+              let d = node.getAttribute("d");
+              d = d.replace(/(?<=C [\d.]+ [.\d]+ )[\d.]+ [\d.]+/, () => {
+                return `${pos.x} ${pos.y}`;
+              });
+              node.setAttribute("d", d);
+              mouseMove = false;
+              clickTime = 1;
+            }
+          }
+        }
+
+        addEventListener("mousemove", function onMove(e) {
+          const pos = mousePos(paintBoard);
+
+          if (e.which !== 1) {
+            if (
+              tool === "polygon" &&
+              Math.abs(pos.x - plgStartPos.x) < 50 &&
+              Math.abs(pos.y - plgStartPos.y) < 50
+            ) {
+              let points = node.getAttribute("points");
+              points = points.replace(/[\d.]+ [\d.]+$/, () => {
+                return `${plgStartPos.x} ${plgStartPos.y}`;
+              });
+              paintBoard.removeChild(node);
+              node = elt("polygon", {
+                points: points,
+                fill: "none",
+                "stroke-width": strokeWidthSelector.value,
+                stroke: foregroundColorSelector.value,
+              });
+              if (isFill.checked) {
+                node.setAttribute("fill", backgroundColorSelector.value);
+              } else {
+                node.setAttribute("fill", "none");
+              }
+              paintBoard.appendChild(node);
+              plgClickTime = 1;
+            }
+
+            removeEventListener("mousemove", onMove);
+            return;
+          }
+
+          if (tool === "pencil") {
+            let d = node.getAttribute("d");
+            d += `L ${pos.x} ${pos.y}`;
+            node.setAttribute("d", d);
+          }
+
+          if (tool === "eraser") {
+            let d = node.getAttribute("d");
+            d += `L ${pos.x} ${pos.y}`;
+            node.setAttribute("d", d);
+          }
+
+          if (tool === "line") {
+            x2 = pos.x;
+            y2 = pos.y;
+            node.setAttribute("x2", x2);
+            node.setAttribute("y2", y2);
+          }
+
+          if (tool === "rect") {
+            const width = pos.x - node.getAttribute("x");
+            const height = pos.y - node.getAttribute("y");
+            node.setAttribute("width", width);
+            node.setAttribute("height", height);
+          }
+
+          if (tool === "circle") {
+            const cx = (pos.x + startPos.x) / 2;
+            const cy = (pos.y + startPos.y) / 2;
+
+            const rx = (pos.x - startPos.x) / 2;
+            const ry = (pos.y - startPos.y) / 2;
+            const r = Math.sqrt(rx ** 2 + ry ** 2);
+
+            node.setAttribute("cx", cx);
+            node.setAttribute("cy", cy);
+            node.setAttribute("r", r);
+          }
+
+          if (tool === "ellipse") {
+            const cx = (pos.x + startPos.x) / 2;
+            const cy = (pos.y + startPos.y) / 2;
+            const rx = Math.abs((pos.x - startPos.x) / 2);
+            const ry = Math.abs((pos.y - startPos.y) / 2);
+            node.setAttribute("cx", cx);
+            node.setAttribute("cy", cy);
+            node.setAttribute("rx", rx);
+            node.setAttribute("ry", ry);
+          }
+
+          if (tool === "polygon") {
+            let points = node.getAttribute("points");
+            points = points.replace(/[\d.]+ [\d.]+$/, () => {
+              return `${pos.x} ${pos.y}`;
+            });
+            node.setAttribute("points", points);
+          }
+
+          if (tool === "BezierCurve") {
+            if (clickTime === 2) {
+              mouseMove = true;
+              let d = node.getAttribute("d");
+              d = d.replace(/[\d.]+ [\d.]+\n\s+$/, () => {
+                return `${pos.x} ${pos.y}\n                `;
+              });
+              node.setAttribute("d", d);
+            } else {
+              if (clickTime === 3) {
+                let d = node.getAttribute("d");
+                d = d.replace(/C [\d.]+ [\d.]+/, () => {
+                  return `C ${pos.x} ${pos.y}`;
+                });
+                node.setAttribute("d", d);
+              } else {
+                let d = node.getAttribute("d");
+                d = d.replace(/(?<=C [\d.]+ [.\d]+ )[\d.]+ [\d.]+/, () => {
+                  return `${pos.x} ${pos.y}`;
+                });
+                node.setAttribute("d", d);
+              }
+            }
+          }
+        });
+      }
+    });
+
+    function elt(tagName, attrs = {}, ...childrenAndText) {
+      const node = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        tagName
+      );
+      for (const key in attrs) {
+        node.setAttribute(key, attrs[key]);
+      }
+      for (let val of childrenAndText) {
+        if (typeof val === "string") {
+          val = document.createTextNode(val);
+        }
+        node.appendChild(val);
+      }
+      return node;
+    }
+
+    // 获取鼠标在节点里面的相对坐标，用于画path
+    function mousePos(node) {
+      const nodePos = node.getBoundingClientRect();
+      return {
+        x: window.event.clientX - nodePos.x,
+        y: window.event.clientY - nodePos.y,
+      };
+    }
+
+    window.addEventListener("keydown", function (e) {
+      if (e.ctrlKey && e.key === "z" && paintBoard.lastChild) {
+        paintBoard.removeChild(paintBoard.lastChild);
+      }
+    });
+    const stk = [];
+    revoke.addEventListener("click", function (e) {
+      if (paintBoard.lastChild) {
+        stk.push(paintBoard.lastChild);
+        paintBoard.removeChild(paintBoard.lastChild);
+      }
+    });
+    cancelRevoke.addEventListener("click", function (e) {
+      if (stk.length) {
+        paintBoard.appendChild(stk.pop());
+      }
+    });
+
+    clearAll.addEventListener("click", function (e) {
+      paintBoard.innerHTML = "";
+
+      node;
+      startPos;
+
+      // 贝塞尔曲线
+      mouseMove = false;
+      clickTime = 1;
+      //
+
+      // polygon
+      plgClickTime = 1;
+      plgStartPos;
+      //
+
+      isSaved = true;
+      stk = [];
+    });
+
+    saveSvg.addEventListener("click", function (e) {
+      isSaved = true;
+      const blob = new Blob([paintBoard.outerHTML], {
+        type: "image/svg+xml",
+      });
+      const link = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = link;
+      anchor.download = "paintBoardImage.svg";
+      anchor.click();
+    });
+    window.onbeforeunload = function (e) {
+      if (isSaved === false) {
+        return "图片未保存";
+      }
+    };
+  </script>
+</html>

@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://code.jquery.com/jquery-latest.js"></script>
+    <link rel="stylesheet" href="./style.css" />
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+    <title>Mini-RegExp101</title>
+  </head>
+
+  <body>
+    <div class="outest">
+      <header>
+        <h2>Mini-RegExp101</h2>
+      </header>
+      <div class="contain">
+        <div class="up">
+          <div class="upLeft">
+            <input
+              class="inputPattern regInput"
+              type="text"
+              value="^(p|d|(ccc|ddd|eee|fff))(hufa|(a{2,4}b*c?)*([^aeiou]*)*(cd|ef|((f+o*)+[odv]+)+dd)+c[def]|def|abc)$"
+            />
+            <div class="allbuttons">
+              <label for="i">
+                i
+                <input type="checkbox" name="" id="i" oninput="match()" />
+              </label>
+              <label for="g">
+                g
+                <input type="checkbox" name="" id="g" oninput="match()" />
+              </label>
+              <button class="matchButton" onclick="match()">匹配</button>
+              <button class="drawButton">绘制铁路图</button>
+            </div>
+            <pre class="inputStr" contenteditable>f</pre>
+          </div>
+          <div class="upRight">
+            <input type="text" class="inputChangeCharacters" oninput="change()" />
+            <pre class="changedStr"></pre>
+          </div>
+        </div>
+        <div class="down">
+          <button class="saveSvg">保存</button>
+          <svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="railway" width="1920" height="1080"></svg>
+          <button class="closeRailway">x</button>
+        </div>
+      </div>
+    </div>
+    <script>
+      window.addEventListener('load', () => {
+        match();
+      });
+
+      const inputPattern = document.querySelector('.inputPattern');
+      const inputStr = document.querySelector('.inputStr');
+      let matchGroups = [];
+      function match() {
+        matchGroups = [];
+        const pattern = inputPattern.value;
+        if (pattern === '') return;
+        let flags = getFlags();
+        try {
+          var regExp = new RegExp(pattern, flags);
+        } catch (e) {
+          inputStr.innerHTML = inputStr.textContent;
+          if (e instanceof SyntaxError) {
+            throw new SyntaxError(pattern + ' is not a valid pattern');
+          }
+          return;
+        }
+
+        let str = inputStr.textContent;
+        let matchStr = '';
+        let match;
+        let matchGroup = 1;
+        let startIdx = 0;
+        while ((match = regExp.exec(str))) {
+          matchGroups.push(match);
+          matchStr += str.slice(startIdx, match.index);
+          matchStr += `<strong title="Match ${matchGroup}">` + highlightGroups(match) + '</strong>';
+          matchGroup++;
+          startIdx = regExp.lastIndex;
+          if (g.checked === false) {
+            startIdx = match.index + match[0].length;
+            break;
+          }
+        }
+        matchStr += str.slice(startIdx);
+        inputStr.innerHTML = matchStr;
+      }
+
+      const i = document.querySelector('#i');
+      const g = document.querySelector('#g');
+
+      function getFlags() {
+        let flags = 'd';
+        if (i.checked) flags += 'i';
+        if (g.checked) flags += 'g';
+        return flags;
+      }
+
+      function highlightGroups(match) {
+        const groupColors = ['#c4e8ac', '#f6d7a6', '#c8c8ff', '#f2cfff', '#ffc5bf', '#c8e7d6'];
+
+        const matchStr = match[0].split('');
+
+        const groupRanges = match.indices.map((range) => {
+          return [range[0] - match.index, range[1] - match.index];
+        });
+        groupRanges.shift(); //去除掉匹配到的本体
+
+        let groupCount = 0;
+
+        // regExp f((.)(.))
+        // matchStr [f,f,f]
+
+        // group     ['', '  ' , '  ' , '  ']
+        const group = new Array(match[0].length + 1).fill('');
+
+        // ((.)(.))
+        //           ['', '((' , ')(' , '))']
+        for (groupRange of groupRanges) {
+          group[groupRange[0]] += `<em title="Group ${groupCount + 1}: ${match[groupCount + 1]}\n Pos: ${
+            groupRange[0]
+          }-${groupRange[1]}" style="background-color: ${groupColors[groupCount++]};">`;
+          group[groupRange[1]] += `</em>`;
+        }
+
+        //           [f,    f ,     f]
+        for (let i = 0; i < matchStr.length; i++) {
+          group[i] += matchStr[i];
+        }
+        return group.join('');
+      }
+
+      const inputChangeCharacters = document.querySelector('.inputChangeCharacters');
+      const changedStr = document.querySelector('.changedStr');
+      function change() {
+        const changeCharacters = inputChangeCharacters.value;
+        const matchRanges = matchGroups.map((matchGroup) => {
+          return [matchGroup.indices[0][0], matchGroup.indices[0][1]];
+        });
+        let startIdx = 0;
+        let str = inputStr.textContent;
+        let newStr = '';
+        for (const matchRange of matchRanges) {
+          newStr += str.slice(startIdx, matchRange[0]);
+          newStr += changeCharacters;
+          startIdx = matchRange[1];
+        }
+        newStr += str.slice(startIdx);
+        changedStr.innerHTML = newStr;
+      }
+    </script>
+
+    <script>
+      const regInput = document.querySelector('.regInput');
+      const draw = function () {
+        const reg = regInput.value;
+        // if (reg.length === 0) break;
+        try {
+          new RegExp(reg);
+        } catch (e) {
+          if (e instanceof SyntaxError) {
+            throw new TypeError(reg + ' is not valid');
+          }
+        }
+        const tree = parseRegularExpression(reg);
+        const graph = createRegularExpressionGraph(tree);
+        const svg = document.querySelector('svg');
+        // svg.setAttribute('width', graph.width);
+        // svg.setAttribute('height', graph.height);
+        // svg.setAttribute('width', graph.width + 'px');
+        // svg.setAttribute('height', graph.height + 'px');
+        svg.setAttribute('viewBox', `0 0 ${graph.width} ${graph.height}`);
+      };
+
+      const parseRegularExpression = (function () {
+        // 代码编译阶段才会造成暂时性死区，编译完成变量挂在作用域上就不会了
+        let str = '';
+        let i = 0;
+
+        function parseBranches() {
+          var nodes = [];
+
+          while (true) {
+            var branch = parseBranch();
+            nodes.push(branch);
+            if (str[i] == '|') {
+              i++; // skip |
+              continue;
+            }
+            if (i >= str.length || str[i] === ')') {
+              break;
+            }
+          }
+
+          return nodes;
+        }
+
+        function parseBranch() {
+          var node = {
+            type: 'Branch',
+            start: i,
+            end: 0,
+            raw: '',
+            elements: [],
+          };
+
+          // while (str[i] !== '|' && str[i] !== ')' && i < str.length) { ????????????????????????????????????
+          while (str[i] !== '|' && str[i] !== ')' && i < str.length) {
+            var part = parseOnePart();
+            if (part.type == 'Quantifier') {
+              part.element = node.elements.pop();
+              part.start = part.element.start;
+              part.raw = str.slice(part.start, part.end);
+            }
+            node.elements.push(part);
+          }
+
+          node.end = i;
+          node.raw = str.slice(node.start, node.end);
+          return node;
+        }
+
+        let groupIndex = 1;
+
+        function parseCaptureGroup() {
+          const node = {
+            type: 'CaptureGroup',
+            name: '',
+            branches: null,
+            raw: '',
+
+            start: i,
+            end: 0,
+            index: 0,
+
+            assertion: false,
+            lookAhead: true,
+            position: true,
+          };
+          i++;
+
+          if (str[i] === '?') {
+            i++;
+
+            if (str[i] === ':') {
+              i++;
+            } else if (str[i] === '=') {
+              (node.assertion = true), i++;
+            } else if (str[i] === '!') {
+              node.assertion = true;
+              node.positive = false;
+              i++;
+            } else if (str[i] === '<') {
+              i++;
+              if (str[i] === '=') {
+                node.assertion = true;
+                node.lookAhead = false;
+                i++;
+              } else if (str[i] === '!') {
+                node.assertion = true;
+                node.lookAhead = false;
+                node.positive = false;
+                i++;
+              } else {
+                node.name = parseName();
+                node.index = groupIndex++;
+                i++;
+              }
+            }
+          } else {
+            node.index = groupIndex++;
+          }
+
+          node.branches = parseBranches();
+          i++;
+          node.end = i;
+          node.raw = str.slice(node.start, node.end);
+          return node;
+        }
+
+        function parseName() {
+          let name = '';
+          while (str[i] !== '>') {
+            name += str[i++];
+          }
+          return name;
+        }
+
+        function parseOnePart() {
+          if (str[i] == '[') {
+            return parseCharacterClass();
+          } else if (str[i] == '(') {
+            return parseCaptureGroup();
+          } else if (str[i] === '{' || str[i] === '+' || str[i] === '*' || str[i] === '?') {
+            return parseQuantifier();
+          } else if (str[i] === '\\') {
+            return parseEscape();
+          } else {
+            return parseCharacter();
+          }
+        }
+
+        function parseEscape() {
+          const node = {
+            type: 'Escape',
+            value: '',
+            raw: '',
+            start: i,
+            end: 0,
+          };
+          i++;
+          node.value = str[i];
+          i++;
+          node.end = i;
+          node.raw = str.slice(node.start, node.end);
+          return node;
+        }
+
+        function parseCharacter() {
+          const node = {
+            type: 'Character',
+            value: str[i],
+            raw: str.slice(i, i + 1),
+            start: i,
+            end: i + 1,
+          };
+          i++;
+          return node;
+        }
+
+        function parseCharacterClass() {
+          const node = {
+            type: 'CharacterClass',
+            elements: [],
+            raw: '',
+            start: i,
+            end: 0,
+            revert: false,
+          };
+          i++;
+          if (str[i] === '^') {
+            node.revert = true;
+            i++;
+          }
+          while (str[i] !== ']') {
+            const character = parseOnePart();
+            if (str[i] === '-') {
+              i++; // skip -;
+              if (str[i] == ']') {
+                node.elements.push(character);
+                i--;
+                const character3 = parseOnePart();
+                node.elements.push(character3);
+              } else {
+                const character2 = parseOnePart();
+                const rangeNode = {
+                  type: 'CharacterRange',
+                  startCharacter: character,
+                  endCharacter: character2,
+                  raw: str.slice(character.start, character2.end),
+                  start: character.start,
+                  end: character.end,
+                };
+                node.elements.push(rangeNode);
+              }
+            } else {
+              node.elements.push(character);
+            }
+          }
+          i++; // skip );
+          node.end = i;
+          node.raw = str.slice(node.start, node.end);
+          return node;
+        }
+
+        function parseQuantifier() {
+          const node = {
+            type: 'Quantifier',
+            element: [],
+            raw: '',
+            start: i,
+            end: 0,
+            min: 0,
+            max: Infinity,
+            greedy: true,
+          };
+
+          if (str[i] === '?') {
+            node.max = 1;
+            i++;
+          } else if (str[i] === '*') {
+            i++;
+          } else if (str[i] === '+') {
+            node.min = 1;
+            i++;
+          } else if (str[i] === '{') {
+            i++;
+            skipSpace();
+            node.min = parseInteger();
+            skipSpace();
+
+            if (str[i] === '}') {
+              node.max = node.min;
+              i++;
+            } else if (str[i] === ',') {
+              i++;
+              skipSpace();
+              if (str[i] === '}') {
+                i++;
+              } else {
+                node.max = parseInteger();
+                skipSpace();
+                i++;
+              }
+            }
+          }
+
+          if (str[i] === '?') {
+            node.greedy = false;
+            i++;
+          }
+
+          node.end = i;
+          node.raw = str.slice(node.start, node.end);
+          return node;
+        }
+
+        function parseInteger() {
+          let numStr = '';
+          while (str[i] >= '0' && str[i] <= '9') {
+            numStr += str[i++];
+          }
+          return Number.parseInt(numStr);
+        }
+
+        function skipSpace() {
+          while (str[i] === ' ') i++;
+        }
+
+        // // 代码编译阶段才会造成暂时性死区，编译完成变量挂在作用域上就不会了
+        // let str = '';
+        // let i = 0;
+
+        function parsePattern() {
+          const node = {
+            type: 'RegularExpression',
+            branches: parseBranches(),
+          };
+          return node;
+        }
+
+        return function parseRegularExpression(input) {
+          str = input;
+          i = 0;
+          groupIndex = 1;
+          return parsePattern();
+        };
+      })();
+
+      const createRegularExpressionGraph = (function () {
+        function elt(tagName, attrs = {}, ...children) {
+          const el = document.createElementNS('http://www.w3.org/2000/svg', tagName);
+          for (const key in attrs) {
+            el.setAttribute(key, attrs[key]);
+          }
+          for (let child of children) {
+            if (typeof child === 'string') {
+              child = document.createTextNode(child);
+            }
+            el.appendChild(child);
+          }
+          svg.appendChild(el); // 为了拿到box,一会删除了
+          return el;
+        }
+
+        function createBranchesGraph(branches) {
+          const g = elt('g');
+          const graphs = branches.map(createBranchGraph);
+          const height = graphs.map((it) => it.height).reduce(add) + (graphs.length + 1) * 4 * gp;
+          const width = graphs.map((it) => it.width).reduce(max) + 8 * gp;
+          const fill = elt('rect', {
+            width,
+            height,
+            fill: 'none',
+          });
+          g.appendChild(fill);
+          let y = 4 * gp;
+          for (const graph of graphs) {
+            graph.g.setAttribute('transform', `translate(${(width - graph.width) / 2}, ${y})`);
+            const line = elt('path', {
+              d: `
+            M ${(width - graph.width) / 2} ${y + graph.height / 2}
+            H ${gp * 4}
+            C ${2 * gp} ${y + graph.height / 2} ${2 * gp} ${height / 2} 0 ${height / 2}
+
+            M ${width / 2 + graph.width / 2} ${y + graph.height / 2}
+            H ${width - gp * 4}
+            C ${width - gp * 2} ${y + graph.height / 2} ${width - gp * 2} ${height / 2} ${width} ${height / 2}
+          `,
+              fill: 'none',
+              stroke: 'black',
+              'stroke-width': 1,
+            });
+            g.appendChild(line);
+            y += graph.height + 4 * gp;
+            g.appendChild(graph.g);
+          }
+
+          return {
+            g,
+            height,
+            width,
+          };
+        }
+
+        function createBranchGraph(node) {
+          const g = elt('g');
+          const graphs = node.elements.map(createGraph);
+          // reduce渐进，初始值不断累加数组的每一项；???????????????????????????????
+          const height = graphs.map((it) => it.height).reduce(max);
+          const width = graphs.map((it) => it.width).reduce(add) + (graphs.length + 1) * gp;
+          const fill = elt('rect', {
+            width,
+            height,
+            fill: 'none',
+          });
+          g.appendChild(fill);
+          // const path = elt('line', {
+          //   x1: 0,
+          //   y1: height / 2,
+          //   x2: width,
+          //   y2: height / 2,
+          //   stroke: 'none',
+          //   'stroke-width': 1,
+          // });
+          const path = elt('path', {
+            d: `
+              M 0 ${height / 2}
+              l ${gp} 0
+            `,
+            stroke: 'black',
+            'stroke-width': 1,
+          });
+
+          g.appendChild(path);
+          let x = gp;
+          for (const graph of graphs) {
+            graph.g.setAttribute('transform', `translate(${x}, ${(height - graph.height) / 2})`);
+            const path = elt('path', {
+              d: `
+              M ${x + graph.width} ${height / 2}
+              l ${gp} 0
+            `,
+              stroke: 'black',
+              'stroke-width': 1,
+            });
+            g.appendChild(path);
+            x += graph.width + gp;
+            g.appendChild(graph.g);
+          }
+
+          const gBox = g.getBBox();
+          return {
+            g,
+            height,
+            width,
+          };
+        }
+
+        function createGraph(node) {
+          if (node.type === 'Character') return createCharacterGraph(node);
+          if (node.type === 'CharacterClass') return createCharacterClassGraph(node);
+          if (node.type === 'Escape') return createEscapeGraph(node);
+          if (node.type === 'CaptureGroup') return createCaptureGroupGraph(node);
+          if (node.type === 'Quantifier') return createQuantifierGraph(node);
+          if (node.type === 'CharacterRange') return createCharacterRangeGraph(node);
+        }
+
+        const svg = document.querySelector('svg');
+        const gp = 10;
+
+        function createCharacterGraph(node) {
+          const text = elt(
+            'text',
+            {
+              'dominant-baseline': 'text-before-edge',
+              x: gp,
+              y: gp / 2,
+            },
+            node.value
+          );
+          const textBox = text.getBBox();
+          const fill = elt('rect', {
+            width: textBox.width + gp * 2,
+            height: textBox.height + gp * 1,
+            fill: '#dae9e5',
+            rx: 5,
+          });
+          const g = elt('g', {}, fill, text);
+
+          return {
+            g,
+            width: g.getBBox().width,
+            height: g.getBBox().height,
+          };
+        }
+
+        function createEscapeGraph(node) {
+          const text = elt(
+            'text',
+            {
+              'dominant-baseline': 'text-before-edge',
+              x: gp,
+              y: gp,
+            },
+            node.raw
+          );
+          const textBox = text.getBBox();
+          const fill = elt('rect', {
+            width: textBox.width + gp * 2,
+            height: textBox.height + gp * 2,
+            fill: '#dae9e5',
+            rx: 5,
+          });
+          const g = elt('g', {}, fill, text);
+
+          return {
+            g,
+            width: g.getBBox().width,
+            height: g.getBBox().height,
+          };
+        }
+
+        function createCharacterClassGraph(node) {
+          const g = elt('g');
+          const graphs = node.elements.map(createGraph);
+          // reduce渐进，初始值不断累加数组的每一项；???????????????????????????????
+          const height = graphs.map((it) => it.height).reduce(add) + (graphs.length + 1) * gp;
+          const width = graphs.map((it) => it.width).reduce(max) + 2 * gp;
+          const fill = elt('rect', {
+            width,
+            height,
+            fill: '#cbcbba',
+            rx: 5,
+          });
+          if (node.revert === true) {
+            fill.setAttribute('fill', 'red');
+          }
+          g.appendChild(fill);
+
+          let y = gp;
+          for (const graph of graphs) {
+            graph.g.setAttribute('transform', `translate(${(width - graph.width) / 2}, ${y})`);
+            y += graph.height + gp;
+            g.appendChild(graph.g);
+          }
+
+          const gBox = g.getBBox();
+          return {
+            g,
+            height,
+            width,
+          };
+        }
+
+        function add(a, b) {
+          return a + b;
+        }
+
+        function max(a, b) {
+          return Math.max(a, b);
+        }
+
+        function createCharacterRangeGraph(node) {
+          startCharacterGraph = createGraph(node.startCharacter);
+          endCharacterGraph = createGraph(node.endCharacter);
+          const fill = elt('rect', {
+            width: startCharacterGraph.width * 2 + gp,
+            height: startCharacterGraph.height,
+            fill: 'rgb(203, 203, 186)',
+          });
+          const text = elt(
+            'text',
+            {
+              'dominant-baseline': 'text-before-edge',
+            },
+            '-'
+          );
+          text.setAttribute(
+            'transform',
+            `translate(${startCharacterGraph.width + (gp - text.getBBox().width) / 2}, ${
+              (fill.getBBox().height - text.getBBox().height) / 2
+            })`
+          );
+          const g = elt('g', {}, fill, startCharacterGraph.g, text, endCharacterGraph.g);
+          endCharacterGraph.g.setAttribute('transform', `translate(${startCharacterGraph.width + gp}, ${0})`);
+          return {
+            g,
+            width: g.getBBox().width,
+            height: g.getBBox().height,
+          };
+        }
+
+        function createCaptureGroupGraph(node) {
+          const branchesGraph = createBranchesGraph(node.branches);
+          var fill = elt('rect', {
+            width: branchesGraph.width,
+            height: branchesGraph.height,
+            fill: 'none',
+          });
+          const dottedBorder = elt('rect', {
+            width: branchesGraph.width,
+            height: branchesGraph.height,
+            'stroke-dasharray': '7 7',
+            fill: 'none',
+            stroke: 'grey',
+            'stroke-width': 1,
+          });
+          const g = elt('g', {}, fill, branchesGraph.g, dottedBorder);
+          return {
+            g,
+            width: g.getBBox().width,
+            height: g.getBBox().height,
+          };
+        }
+
+        function createQuantifierGraph(node) {
+          const g = elt('g');
+          const elementGraph = createGraph(node.element);
+          const fill = elt('rect', {
+            width: elementGraph.width + 4 * gp,
+            height: elementGraph.height + 4 * gp,
+            fill: 'none',
+          });
+          g.appendChild(fill);
+          elementGraph.g.setAttribute('transform', `translate(${2 * gp}, ${2 * gp})`);
+          if (node.min === 0) {
+            // const fill = elt('rect', {
+            //   width: elementGraph.width + 4 * gp,
+            //   height: elementGraph.height / 2 + 2 * gp,
+            //   fill: 'none',
+            // })
+            // g.appendChild(fill);
+            const line = elt('path', {
+              d: `
+            M ${0} ${elementGraph.height / 2 + 2 * gp}
+            a ${gp} ${gp} 0 0 0 ${gp} ${-gp}
+            v ${-elementGraph.height / 2}
+            a ${gp} ${gp} 0 0 1 ${gp} ${-gp}
+            h ${elementGraph.width}
+            a ${gp} ${gp} 0 0 1 ${gp} ${gp}
+            v ${elementGraph.height / 2}
+            a ${gp} ${gp} 0 0 0 ${gp} ${gp}
+
+            M ${0} ${elementGraph.height / 2 + 2 * gp}
+            h ${elementGraph.width + 4 * gp}
+          `,
+              fill: 'none',
+              stroke: 'black',
+              'stroke-width': 1,
+            });
+            g.appendChild(line);
+          }
+          if (node.max > 1) {
+            // const fill = elt('rect', {
+            //   y: elementGraph.height / 2 + 2 * gp,
+            //   width: elementGraph.width + 4 * gp,
+            //   height: elementGraph.height / 2 + 2 * gp,
+            //   fill: 'none',
+            // })
+            // g.appendChild(fill);
+            const line = elt('path', {
+              // r r 旋转角 优弧 逆时针 终点
+              d: `
+            M ${2 * gp + elementGraph.width} ${elementGraph.height / 2 + 2 * gp}
+            a ${gp} ${gp} 0 0 1 ${gp} ${gp}
+            v ${elementGraph.height / 4}
+            l ${-gp / 2} ${-gp / 2}
+            l ${gp / 2} ${gp / 2}
+            l ${gp / 2} ${-gp / 2}
+            l ${-gp / 2} ${gp / 2}
+            v ${elementGraph.height / 4}
+            a ${gp} ${gp} 0 0 1 ${-gp} ${gp}
+            h ${-elementGraph.width}
+            a ${gp} ${gp} 0 0 1 ${-gp} ${-gp}
+            v ${-elementGraph.height / 2}
+            a ${gp} ${gp} 0 0 1 ${gp} ${-gp}
+
+            M ${0} ${elementGraph.height / 2 + 2 * gp}
+            h ${elementGraph.width + 4 * gp}
+          `,
+              fill: 'none',
+              stroke: 'black',
+              'stroke-width': 1,
+            });
+            g.appendChild(line);
+          }
+          g.appendChild(elementGraph.g);
+          return {
+            g,
+            width: g.getBBox().width,
+            height: g.getBBox().height,
+          };
+        }
+
+        function createWholeBranchesGraph(node) {
+          const branchesGraph = createBranchesGraph(node.branches);
+          const fill = elt('rect', {
+            width: branchesGraph.width + 8 * gp,
+            height: branchesGraph.height,
+            fill: 'none',
+          });
+          const g = elt('g', {}, fill, branchesGraph.g);
+          branchesGraph.g.setAttribute('transform', `translate(${gp * 4}, 0)`);
+          const leftCircle = elt('circle', {
+            r: gp,
+            cx: 3 * gp,
+            cy: branchesGraph.height / 2,
+            fill: '#6b6659',
+            stroke: 'black',
+            'stroke-width': 1,
+          });
+          g.appendChild(leftCircle);
+          const rightCircle = elt('circle', {
+            r: gp,
+            cx: g.getBBox().width - 3 * gp,
+            cy: branchesGraph.height / 2,
+            fill: '#6b6659',
+            stroke: 'black',
+            'stroke-width': 1,
+          });
+          g.appendChild(rightCircle);
+          return {
+            g,
+            width: g.getBBox().width,
+            height: g.getBBox().height,
+          };
+        }
+
+        return function createRegularExpressionGraph(node) {
+          svg.innerHTML = '';
+          return createWholeBranchesGraph(node);
+        };
+      })();
+
+      const railway = document.querySelector('#railway');
+      const saveSvg = document.querySelector('.saveSvg');
+      saveSvg.addEventListener('click', function (e) {
+        const blob = new Blob([railway.outerHTML], {
+          type: 'image/svg+xml',
+        });
+        const link = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = link;
+        anchor.download = 'paintBoardImage.svg';
+        anchor.click();
+      });
+
+      $('.down').hide();
+      $('.drawButton').click(function () {
+        $('.down').show(0, function () {
+          $(this).css('flex-basis', '100%');
+          setTimeout(() => {
+            draw();
+          }, 100);
+        });
+        $('.up').hide();
+      });
+      $('.closeRailway').click(function () {
+        $('.down').hide();
+        $('.up').show();
+      });
+    </script>
+  </body>
+</html>

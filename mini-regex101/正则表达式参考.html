@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document</title>
+  <style>
+    strong:nth-child(odd) {
+      background-color: rgb(221, 114, 114);
+    }
+
+    strong:nth-child(even) {
+      background-color: rgb(201, 201, 52);
+    }
+
+    strong:empty {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background-color: red;
+    }
+
+    #textstyle {
+      width: 200px;
+    }
+
+    #retext {
+      width: 100%;
+      height: 150px;
+      border: 2px black solid;
+      white-space: normal;
+      overflow: auto;
+      line-height: 1.5;
+      font-size: 18px;
+      font-family: "consolas";
+    }
+
+    em:hover {
+      box-shadow: 0 0 2px black;
+    }
+
+    em:hover em {
+      background-color: transparent !important;
+    }
+  </style>
+</head>
+
+<body>
+  <div>REGULAR EXPRESSION</div>
+  <input type="text" id="reges" value="f(.)(.)" />
+  <button onclick="run()">Run</button>
+  <div>
+    <label>i<input type="checkbox" id="reflagI" /></label>
+    <label>g<input type="checkbox" id="reflagG" /></label>
+    <label>m<input type="checkbox" id="reflagM" /></label>
+  </div>
+  <div>TEST STRING</div>
+  <div id="textstyle">
+    <pre id="retext" contenteditable="" ></pre>
+  </div>
+
+  <script>
+    function run() {
+      var re = reges.value;
+      var str = retext.innerText;
+      var flag = getFlag();
+      if (!re) {
+        retext.innerHTML = str;
+        return;
+      }
+      //防止输入不正确的正则导致报错
+      try {
+        var regexp = new RegExp(re, flag + "d"); //默认添加d模式，获取元组的信息
+      } catch (e) {
+        if (e instanceof SyntaxError) {
+          retext.innerHTML = str;
+          return;
+        } else {
+          throw e;
+        }
+      }
+
+      var result = "";
+      var startIndex = 0;
+      var match;
+      var matchCount = 0;
+
+      while ((match = regexp.exec(str))) {
+        matchCount++; //第n个分组计数
+        result += str.slice(startIndex, match.index);
+        result +=
+          `<strong title="Match ${matchCount}">` +
+          highlightGroups(match) +
+          "</strong>"; //为匹配到的元素添加分组和高亮
+        startIndex = regexp.lastIndex;
+        if (!match[0]) {
+          //防止正则为空时，match[0]为空串，进入死循环
+          regexp.lastIndex++;
+        }
+        if (!regexp.global) {
+          break;
+        }
+      }
+      result += str.slice(startIndex);
+      retext.innerHTML = result;
+    }
+
+    //获取正则的匹配模式
+    function getFlag() {
+      var flag = "";
+      if (reflagI.checked == true) {
+        flag += "i";
+      }
+      if (reflagG.checked == true) {
+        flag += "g";
+      }
+      if (reflagM.checked == true) {
+        flag += "m";
+      }
+      return flag;
+    }
+
+    //获取分组，并高亮
+    function highlightGroups(match) {
+      var groupColors = [
+        "#c4e8ac",
+        "#f6d7a6",
+        "#c8c8ff",
+        "#f2cfff",
+        "#ffc5bf",
+        "#c8e7d6",
+      ];
+
+      var result = "";
+      var matchString = match[0];
+      var groupRanges = match.indices.map((range) => {
+        var start = range[0];
+        var end = range[1];
+        return [start - match.index, end - match.index];
+      });
+      groupRanges.shift(); //去除掉正则对象第一个值（匹配到的本体）
+
+      var matchChars = match[0].split(""); //获取匹配整体的各个字符串
+      var tags = new Array(match[0].length + 1).fill(""); //创建数组，将正则的括号转变成高亮标签
+
+      var count = 1;
+
+      for (var range of groupRanges) {
+        var start = range[0];
+        var end = range[1];
+
+        tags[start] += `<em style="background-color:${
+            groupColors[count - 1]
+          }"  title="Group ${count++}\nPos ${range[0]}-${range[1]}">`;
+        tags[end] += "</em>";
+      }
+
+      for (var i = 0; i < matchChars.length; i++) {
+        result += tags[i] + matchChars[i]; //将各个字符串和标签互相拼接
+      }
+      result += tags[i];
+      return result;
+    }
+
+    run();
+  </script>
+</body>
+
+</html>

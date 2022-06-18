@@ -1,0 +1,78 @@
+html {
+  height: 100%;
+
+  body {
+    height: 100%;
+    margin: 0;
+
+    #container {
+      height: 100%;
+      display: flex;
+      outline: 1px solid;
+
+      #middle {
+        order: 2;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+
+        #header {
+          flex-basis: 10%;
+          display: flex;
+          outline: 1px solid black;
+
+          #colorList {
+            flex-grow: 1;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+
+            * {
+              flex-basis: auto;
+            }
+          }
+
+          #range {}
+
+          #toolList {
+            flex-grow: 3;
+            display: flex;
+            justify-content: space-between;
+
+            * {
+              flex-basis: 10%;
+            }
+          }
+
+          #functionBtn {
+            flex-grow: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: space-around;
+
+            * {
+              flex-basis: auto;
+            }
+          }
+        }
+
+        #paintBoard {
+          flex: auto;
+        }
+      }
+
+      #left {
+        order: 1;
+        flex-basis: 10%;
+        outline: 1px solid black;
+      }
+
+      #right {
+        order: 3;
+        flex-basis: 10%;
+        outline: 1px solid black;
+      }
+    }
+  }
+}
