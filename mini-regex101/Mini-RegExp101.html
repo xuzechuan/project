@@ -25,12 +25,12 @@
             />
             <div class="allbuttons">
               <label for="i">
-                i
                 <input type="checkbox" name="" id="i" oninput="match()" />
+                <span style="font-weight: 900">i(区分大小写)</span>
               </label>
               <label for="g">
-                g
                 <input type="checkbox" name="" id="g" oninput="match()" />
+                <span style="font-weight: 900">g(匹配一次或多次)</span>
               </label>
               <button class="matchButton" onclick="match()">匹配</button>
               <button class="drawButton">绘制铁路图</button>
@@ -38,7 +38,12 @@
             <pre class="inputStr" contenteditable>f</pre>
           </div>
           <div class="upRight">
-            <input type="text" class="inputChangeCharacters" oninput="change()" />
+            <input
+              type="text"
+              class="inputChangeCharacters"
+              placeholder="用输入的字符串替换匹配到的部分"
+              oninput="change()"
+            />
             <pre class="changedStr"></pre>
           </div>
         </div>

@@ -112,7 +112,8 @@ html body .outest .contain .up .upLeft .inputStr {
   white-space: pre-wrap;
   font-family: 'Courier New';
   font-weight: 1000;
-  background-color: #41c788;
+  background-image: url("./duola.png");
+  background-size: cover;
 }
 
 html body .outest .contain .up .upRight {
@@ -141,7 +142,8 @@ html body .outest .contain .up .upRight .changedStr {
   white-space: pre-wrap;
   font-family: 'Courier New';
   font-weight: 1000;
-  background-color: rgba(190, 94, 174, 0.501);
+  background-image: url("./foxPic.png");
+  background-size: cover;
 }
 
 html body .outest .contain .down {
